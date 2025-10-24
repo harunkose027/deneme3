@@ -1,0 +1,299 @@
+<!-- ...existing code... -->
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Benimle Çıkar Mısın?</title>
+<style>
+    :root{
+        --pink1:#ff8fc3;
+        --pink2:#ff5fa8;
+        --violet:#8b5cf6;
+        --bg1:#fff0f8;
+    }
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{
+        background: radial-gradient(60% 60% at 10% 10%, #fff0fb 0%, transparent 20%),
+                                linear-gradient(120deg, #ffe6f2 0%, #fff0fb 30%, #fff1f9 60%, #fff 100%);
+        display:flex;align-items:center;justify-content:center;
+        overflow:hidden;color:#4b1036;
+    }
+
+    .scene{
+        width:min(920px,94vw);
+        height:min(620px,86vh);
+        background:linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,246,250,0.9));
+        border-radius:24px;box-shadow:0 10px 40px rgba(139,92,246,0.12);
+        position:relative; padding:36px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    }
+
+    h1{
+        margin:0 0 18px 0;
+        font-size:clamp(20px,4vw,34px);
+        text-align:center;
+        color:#5a0b2e;
+        text-shadow:0 2px 0 rgba(255,255,255,0.6);
+    }
+
+    .question{
+        font-size:clamp(18px,3.2vw,26px);
+        font-weight:700;
+        margin-bottom:22px;
+        display:flex;flex-direction:column;align-items:center;gap:8px;
+    }
+
+    .buttongroup{
+        display:flex;gap:18px;align-items:center;
+    }
+
+    button{
+        border:0;padding:14px 28px;border-radius:999px;font-weight:700;
+        cursor:pointer; font-size:16px; user-select:none;
+        box-shadow:0 10px 20px rgba(139,92,246,0.08);
+        transition:transform .15s ease, box-shadow .15s ease, opacity .2s ease;
+    }
+
+    #yes{
+        background:linear-gradient(90deg,var(--pink1),var(--pink2)); color:white;
+        transform:translateZ(0);
+    }
+    #yes:active{ transform:scale(.98); }
+
+    #no{
+        background:linear-gradient(90deg, #ffeeff, #ffe7f6);
+        color:#9b004c; border:1px solid rgba(155,0,76,0.06);
+        position:relative;
+    }
+
+    /* floating hearts + butterflies */
+    .decoration{
+        position:absolute; inset:0; pointer-events:none;
+    }
+    .heart, .butter{
+        position:absolute; opacity:.85; transform-origin:center;
+        animation:floatUp linear infinite;
+    }
+    @keyframes floatUp{
+        from{ transform:translateY(20px) scale(.9); opacity:0.2;}
+        to{ transform:translateY(-140px) scale(1.1); opacity:1;}
+    }
+    /* cat area when accepted */
+    .result{
+        position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+        display:flex;flex-direction:column;align-items:center; gap:12px;
+        pointer-events:none;
+    }
+    .cat{
+        width:160px; height:160px; filter:drop-shadow(0 8px 24px rgba(139,0,76,0.12));
+        animation:dance 900ms steps(6) infinite;
+        transform-origin:center;
+        object-fit:contain;
+    }
+    @keyframes dance{
+        0%{ transform:translateY(0) rotate(-4deg) }
+        25%{ transform:translateY(-8px) rotate(4deg) }
+        50%{ transform:translateY(0) rotate(-2deg) }
+        75%{ transform:translateY(-6px) rotate(6deg) }
+        100%{ transform:translateY(0) rotate(-4deg) }
+    }
+    .message{
+        background:linear-gradient(90deg,#fff0fb,#fff);
+        color:#6b0a34; padding:10px 16px; border-radius:999px; font-weight:700;
+        box-shadow:0 6px 18px rgba(139,92,246,0.06); pointer-events:auto;
+    }
+
+    /* small responsive */
+    @media (max-width:520px){
+        .cat{ width:120px; height:120px; }
+        .buttongroup{ gap:12px; }
+        button{ padding:12px 18px; font-size:15px; }
+    }
+</style>
+</head>
+<body>
+    <div class="scene" id="scene" aria-live="polite">
+        <div class="decoration" id="decor"></div>
+
+        <div class="question" role="region" aria-labelledby="q">
+            <h1 id="q">Benimle Çıkar Mısın Prenses Nazlıcan Orhan?</h1>
+            <div class="buttongroup" id="buttons">
+                <button id="yes" aria-label="Evet">Evet</button>
+                <button id="no" aria-label="Hayır">Hayır</button>
+            </div>
+        </div>
+
+        <div class="result" id="result" style="display:none" aria-hidden="true">
+            <!-- GIF cat yerine SVG vardı, yerine gerçek GIF eklendi -->
+            <img id="catImg" class="cat" src="cat-dance.gif" alt="Dancing cat" style="display:block" />
+            <div class="message" id="message">Beni çok sevdiğini ve benimle çıkmak istediğini biliyordum &lt;3</div>
+        </div>
+    </div>
+
+    <!-- Ses dosyalarını aynı klasöre koyun: celebration.mp3 (kutlama müziği), meow.mp3 (isteğe bağlı) -->
+    <audio id="celebration" src="celebration.mp3" preload="auto"></audio>
+    <audio id="meow" src="meow.mp3" preload="auto"></audio>
+
+<script>
+    const scene = document.getElementById('scene');
+    const noBtn = document.getElementById('no');
+    const yesBtn = document.getElementById('yes');
+    const result = document.getElementById('result');
+    const decor = document.getElementById('decor');
+    const catImg = document.getElementById('catImg');
+    const celebration = document.getElementById('celebration');
+    const meowAudio = document.getElementById('meow');
+
+    // WebAudio kept for small squeak if wanted
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function ensureAudio() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playSqueak() {
+        ensureAudio();
+        const t0 = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        const f = audioCtx.createBiquadFilter();
+        o.type = 'square';
+        o.frequency.setValueAtTime(780, t0);
+        f.type = 'highpass';
+        f.frequency.value = 400;
+        o.connect(f);
+        f.connect(g);
+        g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.001, t0);
+        g.gain.linearRampToValueAtTime(0.12, t0 + 0.01);
+        o.frequency.exponentialRampToValueAtTime(1200, t0 + 0.09);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+        o.start(t0);
+        o.stop(t0 + 0.35);
+    }
+
+    // Create floating hearts and butterflies
+    const hearts = 10;
+    for(let i=0;i<hearts;i++){
+        const el = document.createElement('div');
+        el.className = Math.random() > 0.6 ? 'butter' : 'heart';
+        el.style.left = (Math.random()*90) + '%';
+        el.style.bottom = (Math.random()*10 - 5) + '%';
+        el.style.fontSize = (12 + Math.random()*42) + 'px';
+        el.style.animationDuration = (6 + Math.random()*6) + 's';
+        el.style.opacity = 0.7 + Math.random()*0.3;
+        el.innerHTML = el.className === 'butter' ? '🦋' : '💖';
+        decor.appendChild(el);
+    }
+
+    // Make "Hayır" impossible to click
+    let moving = false;
+    function placeNoRandomly(){
+        const pad = 8;
+        const containerRect = scene.getBoundingClientRect();
+        const btnRect = noBtn.getBoundingClientRect();
+
+        const maxX = Math.max(0, containerRect.width - btnRect.width - pad);
+        const maxY = Math.max(0, containerRect.height - btnRect.height - pad);
+
+        const x = Math.random() * maxX - (containerRect.width/2 - btnRect.width/2);
+        const y = Math.random() * (maxY * 0.6) - (containerRect.height/4);
+        noBtn.style.transition = 'transform 180ms ease';
+        noBtn.style.transform = `translate(${x}px, ${y}px)`;
+        // playful squeak
+        try { playSqueak(); } catch(e){ /* silent if audio ctx blocked */ }
+        noBtn.style.pointerEvents = 'auto';
+    }
+
+    function distanceToButton(cx, cy){
+        const b = noBtn.getBoundingClientRect();
+        const bx = b.left + b.width/2;
+        const by = b.top + b.height/2;
+        return Math.hypot(bx - cx, by - cy);
+    }
+
+    document.addEventListener('mousemove', (e)=>{
+        const d = distanceToButton(e.clientX, e.clientY);
+        if(d < 110){
+            if(!moving){
+                moving = true;
+                placeNoRandomly();
+                setTimeout(()=> moving = false, 220);
+            }
+        }
+    });
+
+    ['mouseenter','focus','touchstart'].forEach(ev=>{
+        noBtn.addEventListener(ev, (e)=>{
+            e.preventDefault();
+            placeNoRandomly();
+        }, {passive:true});
+    });
+
+    noBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        placeNoRandomly();
+    }, true);
+
+    // Evet click: göster GIF ve çal kutlama müziğini
+    yesBtn.addEventListener('click', async ()=>{
+        // resume any suspended audio contexts
+        try {
+            ensureAudio();
+            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+        } catch(e){ /* ignore */ }
+
+        // show result (GIF görüntüsü içinde)
+        result.style.display = 'flex';
+        result.setAttribute('aria-hidden','false');
+
+        // play celebration audio element (dosyayı aynı klasöre koyun)
+        try {
+            celebration.currentTime = 0;
+            await celebration.play();
+        } catch(e){
+            // tarayıcı izin reddi durumunda sessizce devam
+        }
+
+        // optional meow sound if provided
+        try {
+            meowAudio.currentTime = 0;
+            meowAudio.play().catch(()=>{});
+        } catch(e){}
+
+        // small visual burst
+        for(let i=0;i<28;i++){
+            const t = document.createElement('div');
+            t.style.position = 'absolute';
+            t.style.left = (50 + (Math.random()*120 - 60)) + '%';
+            t.style.bottom = (8 + Math.random()*48) + '%';
+            t.style.fontSize = (10 + Math.random()*30) + 'px';
+            t.style.opacity = 0.95;
+            t.style.transform = `translateX(-50%)`;
+            t.style.transition = `transform ${(600+Math.random()*1000)}ms cubic-bezier(.2,.9,.3,1), opacity 900ms`;
+            t.innerText = Math.random()>0.55 ? '🦋' : '💖';
+            scene.appendChild(t);
+            setTimeout(()=> {
+                t.style.transform = `translateX(-50%) translateY(-120px) rotate(${(Math.random()*80-40)}deg)`;
+                t.style.opacity = 0;
+                setTimeout(()=> t.remove(), 1400);
+            }, 40 + i*28);
+        }
+
+        yesBtn.animate([
+            { transform: 'scale(1)' },
+            { transform: 'scale(1.08)' },
+            { transform: 'scale(1)' }
+        ], {duration:700, iterations:2});
+
+        noBtn.style.pointerEvents = 'none';
+        noBtn.style.opacity = '0.5';
+    });
+
+    window.addEventListener('resize', ()=>{
+        noBtn.style.transform = 'translate(0,0)';
+    });
+</script>
+</body>
+</html>
+<!-- ...existing code... -->
